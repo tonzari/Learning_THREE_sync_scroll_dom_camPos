@@ -1,6 +1,7 @@
 import './style.css'
 import * as THREE from 'three'
 import * as dat from 'lil-gui'
+import gsap from 'gsap'
 
 /**
  * Debug
@@ -14,6 +15,7 @@ const parameters = {
 gui
     .addColor(parameters, 'materialColor')
     .onChange(() => {
+        particleMaterial.color.set(parameters.materialColor)
         material.color.set(parameters.materialColor)
     })
 
@@ -122,12 +124,51 @@ renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 /**
+ * Particles
+ */
+const particlesCount = 200
+const position = new Float32Array(particlesCount * 3)
+
+for(let i = 0; i < particlesCount; i++) {
+    position[i*3 + 0] = (Math.random() - 0.5) * 10
+    position[i*3 + 1] =  objectsDistance * 0.4 - Math.random() * objectsDistance * sectionMeshes.length
+    position[i*3 + 2] = (Math.random() - 0.5) * 10
+}
+
+const particlesGeometry = new THREE.BufferGeometry()
+particlesGeometry.setAttribute('position', new THREE.BufferAttribute(position, 3))
+const particleMaterial = new THREE.PointsMaterial(
+    {
+        color: parameters.materialColor,
+        sizeAttenuation: true,
+        size: 0.03
+    }
+)
+const particles = new THREE.Points(particlesGeometry,particleMaterial)
+scene.add(particles)
+
+/**
  * Scroll
  */
 let scrollY = window.scrollY
+let currentSection = 0
 
  window.addEventListener('scroll', () => {
     scrollY = window.scrollY
+    const newSection = Math.round(scrollY / sizes.height)
+    if (newSection != currentSection) {
+        currentSection = newSection
+        
+        gsap.to(
+            sectionMeshes[currentSection].rotation,
+            {
+                duration: 1.5,
+                ease: 'power2.inOut',
+                x: '+=6',
+                y: '+=3'
+            }
+        )
+    }
 })
 
 /**
@@ -147,23 +188,26 @@ window.addEventListener('mousemove', (e) => {
  * Animate
  */
 const clock = new THREE.Clock()
+let previousTime = 0
 
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
-    
+    const deltaTime = elapsedTime - previousTime
+    previousTime = elapsedTime
+
     // Animate Cam
     camera.position.y = (-scrollY / sizes.height) * objectsDistance
 
     const parallaxX = cursor.x
     const parallaxY = - cursor.y
-    camParent.position.x += (parallaxX - camParent.position.x) * 0.02
-    camParent.position.y += (parallaxY - camParent.position.y) * 0.02
+    camParent.position.x += (parallaxX - camParent.position.x) * 5 * deltaTime
+    camParent.position.y += (parallaxY - camParent.position.y) * 5 * deltaTime
 
     // Animate
     for(const mesh of sectionMeshes) {
-        mesh.rotation.x = elapsedTime * 0.1
-        mesh.rotation.y = elapsedTime * 0.12
+        mesh.rotation.x += deltaTime * 0.1
+        mesh.rotation.y += deltaTime * 0.12
     }
 
     // Render
