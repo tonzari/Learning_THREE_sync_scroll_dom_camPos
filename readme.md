@@ -1,2 +1,3 @@
-THREEJS tutorial code.
-Scroll and sync dom with camera position
+tutorial code.
+
+threejs: scroll event that syncs dom elements with camera position
